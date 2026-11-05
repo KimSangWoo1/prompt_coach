@@ -1,0 +1,86 @@
+{
+  "tested_date": "2026-11-05",
+  "engine": "ollama:qwen3:8b-q4_K_M",
+  "cases": [
+    {
+      "case": "short_unity",
+      "input": "유니티에서 사용할 UIManager 초안 만들어줘",
+      "context": "",
+      "input_characters": 27,
+      "elapsed_seconds": 1.94,
+      "output_characters": 93,
+      "result": {
+        "improved_prompt": "유니티에서 사용할 UIManager 초안 만들어줘\n\n[직접 입력: UIManager가 관리할 UI 요소의 종류]\n[직접 입력: UIManager가 제공할 기능의 범위]",
+        "changes": [
+          "관리할 UI 요소의 종류에 따라 구조와 기능이 달라집니다.",
+          "기능 범위가 명확하지 않아 기능 구현이 어려울 수 있습니다."
+        ],
+        "questions": [
+          "어떤 UI 요소를 관리할 건가요?",
+          "어떤 기능을 제공해야 하나요?"
+        ]
+      }
+    },
+    {
+      "case": "clear_translation",
+      "input": "“안녕하세요”를 자연스러운 영어 한 문장으로 번역해줘.",
+      "context": "",
+      "input_characters": 30,
+      "elapsed_seconds": 0.11,
+      "output_characters": 30,
+      "result": {
+        "improved_prompt": "“안녕하세요”를 자연스러운 영어 한 문장으로 번역해줘.",
+        "changes": [],
+        "questions": []
+      }
+    },
+    {
+      "case": "unity_with_context",
+      "input": "유니티에서 사용할 UIManager 초안 만들어줘",
+      "context": "Unity 2022.3, uGUI 사용. UIManager는 인벤토리 패널의 열기/닫기만 담당해. 이미 있는 패널을 활용하고 다른 기능은 추가하지 마. 짧은 C# 코드와 연결 방법이 필요해.",
+      "input_characters": 27,
+      "elapsed_seconds": 0.12,
+      "output_characters": 27,
+      "result": {
+        "improved_prompt": "유니티에서 사용할 UIManager 초안 만들어줘",
+        "changes": [],
+        "questions": []
+      }
+    },
+    {
+      "case": "short_writing",
+      "input": "팀 공지 초안 써줘",
+      "context": "",
+      "input_characters": 10,
+      "elapsed_seconds": 0.78,
+      "output_characters": 31,
+      "result": {
+        "improved_prompt": "팀 공지 초안 써줘\n\n[직접 입력: 공지의 주제와 내용]",
+        "changes": [
+          "공지의 주제와 내용이 없어 초안을 작성하기 어렵습니다."
+        ],
+        "questions": [
+          "어떤 주제의 공지이고, 어떤 내용을 담을 건가요?"
+        ]
+      }
+    }
+  ],
+  "live_api_case": {
+    "input": "유니티에서 사용할 UIManager 초안 만들어줘",
+    "elapsed_seconds": 1.56,
+    "output_characters": 88,
+    "result": {
+      "improved_prompt": "유니티에서 사용할 UIManager 초안 만들어줘\n\n[직접 입력: UIManager가 관리할 UI 요소의 종류]\n[직접 입력: UIManager의 주요 기능]",
+      "changes": [
+        "관리할 UI 요소의 종류에 따라 구조와 기능이 달라집니다.",
+        "기능 범위가 명확하지 않아 구현 범위를 결정하기 어렵습니다."
+      ],
+      "questions": [
+        "어떤 UI 요소를 관리할 건가요?",
+        "UIManager에 어떤 기능이 포함되어야 하나요?"
+      ],
+      "engine": "ollama:qwen3:8b-q4_K_M",
+      "stored": false
+    }
+  }
+}

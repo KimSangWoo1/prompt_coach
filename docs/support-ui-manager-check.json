@@ -1,0 +1,16 @@
+{
+  "input": "유니티에서 사용할 UIManager 초안 만들어줘",
+  "input_characters": 27,
+  "elapsed_seconds": 3.89,
+  "output_characters": 27,
+  "result": {
+    "improved_prompt": "유니티에서 사용할 UIManager 초안 만들어줘",
+    "changes": [],
+    "questions": [],
+    "engine": "ollama:qwen3:8b-q4_K_M",
+    "stored": false
+  },
+  "tested_date": "2026-11-05",
+  "timezone": "Asia/Seoul",
+  "context": "추가 배경·프로젝트 규칙 없이 현재 Support API를 1회 실행"
+}

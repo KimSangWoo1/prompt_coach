@@ -1,0 +1,10 @@
+[project]
+name = "prompt-coach-local"
+version = "1.0.0"
+description = "Local-first prompt readiness assessment, support and practice history"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"

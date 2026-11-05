@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prompt Coach · 프롬프트 작성 도우미</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body>
+<aside class="sidebar">
+ <a class="brand" href="/"><span class="brandmark">P<span>✦</span></span><span>Prompt Coach<small>생각을 선명하게, 요청을 정확하게</small></span></a>
+ <div class="workspace-label">MY WORKSPACE <span class="localdot">● LOCAL</span></div>
+ <nav aria-label="주 메뉴"><button class="nav active" data-page="write">✎ <span>프롬프트 작성</span></button><button class="nav" data-page="history">▥ <span>성장 기록</span></button><button class="nav" data-page="learn">◇ <span>기법 라이브러리</span></button><button class="nav" data-page="settings">⚙ <span>평가 설정</span></button></nav>
+ <div class="workspace-label space">PRACTICE CONTEXT</div>
+ <label>프로젝트 <button class="mini" id="new-project" aria-label="프로젝트 추가">＋</button><select id="project"></select></label>
+ <label>작성자 <button class="mini" id="new-member" aria-label="작성자 추가">＋</button><select id="member"></select></label>
+ <label>세션 <button class="mini" id="new-session" aria-label="세션 추가">＋</button><select id="session"></select></label>
+ <p class="muted small">작성과 복사는 바로 시작하세요.<br>세션은 점검 이력을 남길 때만 선택합니다.</p>
+ <footer><span class="statusdot">●</span> 이 PC에 기록 저장<br><span class="muted">Python + SQLite · v1.0</span></footer>
+</aside>
+<main>
+ <header><span id="breadcrumb">WORKSPACE / 프롬프트 작성</span><span class="pill" id="engine-pill">규칙 기반 점검</span></header>
+ <div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
+ <section id="page-write" class="page">
+  <div class="page-heading"><div><div class="eyebrow">WRITE WITH INTENTION</div><h1>쓰고, 다듬고, 바로 사용하세요.</h1><p>프로젝트에 맞게 자유롭게 작성하고, 필요한 도움만 받으세요.</p></div><button id="clear-draft" class="secondary">＋ 새 프롬프트</button></div>
+  <div class="info"><strong>작성 → 필요하면 Support → 복사.</strong> 점검과 점수는 선택입니다. AI 응답을 기다리는 동안에도 계속 편집하고 복사할 수 있습니다.</div>
+  <div class="editor-grid">
+   <article class="card editor-card"><div class="card-heading"><h2>프롬프트 작성</h2><div class="editor-actions"><span id="revision-tag" class="subtle">새 기록</span><button class="primary" id="copy-prompt">복사해서 AI에 사용 ↗</button></div></div>
+    <details class="draft-options"><summary>제목·작업 종류 <span class="muted">선택</span></summary><label>제목 <span class="muted">선택</span><input id="prompt-title" maxlength="150" placeholder="예: UI 로딩 취소 처리 개선"></label>
+    <label>작업 종류<select id="task"><option value="auto">자동 판단</option><option value="simple">단순 질문 · 번역 · 요약</option><option value="development">개발 · 설계</option><option value="writing">글쓰기</option><option value="analysis">분석 · 문제 해결</option></select></label></details>
+    <label class="editor-label">프롬프트 <span id="char-count">0자</span><textarea id="prompt-text" rows="14" placeholder="사용할 AI에 보낼 내용을 자유롭게 작성하세요. 필요한 부분은 Support로 다듬을 수 있습니다."></textarea></label>
+    <details><summary>배경과 참고 자료 추가 <span class="muted">점검에 함께 반영</span></summary><textarea id="prompt-context" rows="5" aria-label="배경과 참고 자료" placeholder="환경, 현재 상황, 참고 자료를 적어 주세요. 프로젝트 규칙은 자동으로 함께 반영됩니다."></textarea><p id="project-guidelines" class="small muted"></p></details>
+    <div id="remote-consent-wrap" class="consent hidden"><label><input id="remote-consent" type="checkbox"> 프롬프트·배경·프로젝트 규칙을 설정한 외부 AI API에 전송합니다. API 이용료가 발생할 수 있습니다.</label></div>
+    <div class="actions"><span id="draft-status" class="small muted">초안은 이 브라우저에도 자동 저장됩니다.</span></div><p class="small muted">배경 자료와 프로젝트 규칙이 있으면 복사할 내용에 함께 포함됩니다.</p>
+   </article>
+   <aside class="right-column">
+    <article class="card support-card"><span class="eyebrow">WRITE WITH SUPPORT</span><h2>필요한 부분만 빠르게 다듬기</h2><p>평가 없이 현재 초안으로 바로 개선안을 받습니다. 작성한 내용은 자동으로 바뀌지 않습니다.</p><button id="support" class="support-btn" disabled>✦ Support · 개선안 받기</button><p id="ai-status" class="small muted" role="status" aria-live="polite">Support와 점검은 필요할 때만 사용하세요.</p><button id="cancel-ai" class="secondary hidden">대기 취소</button></article>
+    <details id="evaluation-panel" class="card result-card"><summary>선택 점검 · 참고 점수 보기</summary><p class="small muted">작성한 요청의 참고 피드백입니다. 세션을 선택하면 점검 이력도 저장합니다. 점수가 작성이나 복사를 제한하지 않습니다.</p><button class="secondary" id="evaluate">현재 초안 점검</button><div class="card-heading"><h2>참고 점검 결과</h2><span id="stale" class="pill hidden">이전 초안의 결과</span></div><div id="result-empty" class="empty"><h3>점검은 선택입니다</h3><p>필요할 때만 점검하세요.<br>바로 작성하고 복사할 수 있습니다.</p></div><div id="result" class="hidden"></div></details>
+   </aside>
+  </div>
+  <article id="feedback-card" class="card hidden"><div class="card-heading"><h2>어디를 보완하면 좋을까요?</h2><span class="muted small">기법의 개수보다 작업에 맞는 선택</span></div><div id="feedback" class="feedback-grid"></div></article>
+  <article id="support-result" class="card hidden"><div class="card-heading"><h2>Support 개선안</h2><span id="support-engine" class="pill"></span></div><div id="support-changes"></div><pre id="improved-prompt"></pre><div id="support-questions"></div><div class="actions"><p id="support-source-status" class="small muted"></p><button id="copy-improved" class="secondary">개선안 복사</button><button id="apply-support" class="primary">개선안을 편집기로 가져오기</button></div></article>
+ </section>
+ <section id="page-history" class="page hidden">
+  <div class="page-heading"><div><div class="eyebrow">YOUR PRACTICE, OVER TIME</div><h1>쌓이는 기록, 보이는 변화.</h1><p>프롬프트별 · 세션별 · 날짜별 작성 준비도를 살펴보세요.</p></div><div class="actions"><a id="export-json" class="secondary" href="/api/export" download>JSON 내보내기</a><a class="secondary" href="/api/backup" download>DB 백업</a></div></div>
+  <div class="card filters"><label>프로젝트<select id="filter-project"></select></label><label>작성자<select id="filter-member"></select></label><label>세션<select id="filter-session"></select></label><label>평가 방식<select id="filter-engine"></select></label><label>시작일<input type="date" id="filter-start"></label><label>종료일<input type="date" id="filter-end"></label><label>기록 기준<select id="filter-latest"><option value="1">프롬프트별 최신 버전</option><option value="0">모든 평가 버전</option></select></label></div>
+  <p class="small muted">날짜 기준 UTC+09:00 · 최신 버전은 선택한 필터 범위 안에서 계산합니다. 세션은 사이드바에서 직접 생성한 연습 단위입니다.</p>
+  <div id="history-warning" class="info hidden"></div><div id="metrics" class="metrics"></div>
+  <div class="chart-grid"><article class="card"><h2>작성 준비도 추이</h2><div class="segmented"><button class="active" data-chart="prompt">프롬프트</button><button data-chart="session">세션</button><button data-chart="day">날짜</button></div><div id="trend-chart" class="chart"></div><p class="small muted">Good 80–100 · Normal 55–79.9 · Bad 0–54.9. 점을 가리키면 상세 값을 볼 수 있습니다.</p></article><article class="card"><h2>평가 분포</h2><div id="distribution"></div><p class="small muted">적은 기록만으로 개인이나 팀원의 능력을 단정하지 마세요. 같은 평가 방식과 기준에서 변화를 비교하세요.</p></article></div>
+  <article class="card"><div class="card-heading"><h2>평가 이력</h2><span id="history-count" class="muted"></span></div><div id="history-table" class="table-scroll"></div></article>
+  <article class="card"><h2>세션과 작성자별 요약</h2><div class="feedback-grid"><div id="session-table" class="table-scroll"></div><div id="member-table" class="table-scroll"></div></div></article>
+ </section>
+ <section id="page-learn" class="page hidden"><div class="page-heading"><div><div class="eyebrow">BUILD YOUR PROMPT TOOLKIT</div><h1>더 많이보다, 더 적절하게.</h1><p>17가지 기법의 쓰임과 한계를 익히고, 기법별 예시 3개를 선택해 살펴보세요.</p></div></div><div class="info">기법 감지는 작성된 표현에 근거한 후보입니다. RAG·ReAct·ToT·체이닝의 실제 검색·도구 실행·다중 호출 여부는 텍스트만으로 확인할 수 없습니다.</div><div class="practice-grid" id="practice"></div><div id="technique-cards" class="technique-grid"></div></section>
+ <section id="page-settings" class="page hidden"><div class="page-heading"><div><div class="eyebrow">MAKE IT YOURS</div><h1>평가 방식을 선택하세요.</h1><p>로컬 데이터 저장과 AI 처리 위치를 분리해 관리합니다.</p></div></div>
+  <article class="card settings-card"><label>평가 방식<select id="provider"><option value="local">규칙 기반 점검 — AI 아님 / 설치 없이 사용</option><option value="ollama">Ollama — 로컬 AI</option><option value="openai">OpenAI / 호환 API — 외부 AI</option><option value="anthropic">Claude (Anthropic) — 외부 AI</option></select></label><label>모델 <span class="muted">선택한 AI의 모델 목록</span><select id="model"></select></label><p class="small muted">앱에 등록된 모델 목록입니다. Ollama 모델은 먼저 다운로드하고, 외부 AI 모델은 계정의 이용 권한을 확인하세요.</p><label>API 기본 주소<input id="base-url" placeholder="http://127.0.0.1:11434"></label><label>대기 시간 (초)<input id="timeout" type="number" min="10" max="300" value="120"></label><label>선택한 공급자의 API 키 <span class="muted">입력한 키는 프로세스 메모리에만 유지</span><input type="password" id="api-key" autocomplete="off" placeholder="이 공급자·주소의 기존 키를 유지하려면 비워두세요"></label><label class="checkbox"><input type="checkbox" id="clear-key">선택한 공급자·주소의 API 키 지우기</label><p id="key-status" class="small muted"></p><button id="save-settings" class="primary">설정 저장</button><div id="provider-guide" class="info"></div></article>
+  <article class="card"><h2>평가 기준</h2><div id="rubric-table" class="table-scroll"></div><p>적용 가능한 항목의 가중치만으로 총점을 계산합니다. 불필요한 예시·역할·복잡한 기법을 추가해도 점수가 자동으로 높아지지 않습니다. 항목별 0–5점을 가중 평균해 100점으로 환산합니다.</p><p class="small muted">루브릭 readiness-1.0 · 기준 시간대 UTC+09:00 · API 실패 시 규칙 평가로 몰래 전환하거나 빈 점수를 저장하지 않습니다.</p></article>
+  <article class="card"><h2>로컬 저장과 팀 사용</h2><p>프로젝트·작성자·세션·원문·버전·점수·개선안을 이 PC의 SQLite 파일에 저장합니다. 여러 팀원을 작성자로 등록해 한 PC에서 사용할 수 있습니다. 계정 인증이나 여러 PC 간 실시간 동기화는 제공하지 않습니다.</p><p>앱 실행 폴더의 data 디렉터리를 관리하세요. 실행 중 백업은 성장 기록의 DB 백업 버튼을 사용하세요. 복원하려면 앱을 종료한 뒤 백업 파일을 data/coach.sqlite3로 교체하세요. 기존 DB·WAL·SHM 파일은 별도 폴더에 함께 보관한 후 교체하세요.</p></article>
+ </section>
+</main>
+<dialog id="create-dialog"><form id="create-form"><h2 id="create-title">새 항목</h2><label>이름<input id="create-name" maxlength="100" required></label><label id="guidelines-label">프로젝트 공통 규칙<textarea id="create-guidelines" rows="5" placeholder="작업 환경, 유지할 규칙 등 — 평가에 함께 반영됩니다."></textarea></label><div class="actions"><button id="cancel-create" type="button" class="secondary">취소</button><button class="primary" type="submit">만들기</button></div></form></dialog>
+<dialog id="record-dialog"><div class="card-heading"><h2>평가 기록</h2><button id="close-record" class="secondary">닫기</button></div><div id="record-detail"></div><button id="load-record" class="primary">이 기록을 불러와 수정하기</button></dialog>
+</body></html>
