@@ -71,4 +71,6 @@ project_id / member_id / session_id / engine / rubric / start / end / latest를 
 
 인용 근거에는 evidence_verified가 추가됩니다. true이면 원문/문맥의 실제 인용, false이면 AI의 해석입니다. false인 근거도 점검 전체를 실패시키지 않습니다.
 
-AI Support는 내부적으로 핵심 확인 항목(topic/reason/question)을 요청하고, 서버가 원문에 확인 빈칸을 덧붙여 기존 improved_prompt/changes/questions 응답으로 변환합니다. 원문·조건·앞뒤 공백은 보존하고 확인 항목은 최대 2개입니다. 공개 요청/응답 형식과 DB 스키마는 변경하지 않습니다.
+AI Support는 내부적으로 핵심 확인 항목(topic/reason/question)을 요청하고, 기존 improved_prompt/changes/questions 필드와 추가 clarifications 배열을 반환합니다. clarifications는 최대 두 개의 `{topic, reason, question}` 객체이며 공통 계약 검증을 통과합니다. 빈 배열이면 추가로 확인할 항목이 없다는 뜻입니다. 이전 제공자의 응답처럼 clarifications가 없는 경우도 계속 지원합니다. 원문·조건·앞뒤 공백과 DB 스키마는 유지합니다.
+
+브라우저는 입력이나 일시 정지에 반응해 Support를 호출하지 않습니다. 사용자가 버튼을 누른 경우에만 요청합니다. clarifications가 있으면 항목을 처음에 모두 미선택 상태로 표시하고, 체크한 항목과 사용자가 적은 답만 원문 뒤에 덧붙여 반영합니다. 선택안 생성과 반영은 추가 AI 호출 없이 브라우저에서 처리합니다.

@@ -110,7 +110,7 @@ class ClaudeTransportTests(unittest.TestCase):
 
     def test_support_uses_the_same_transport_with_support_schema(self):
         raw = {"clarifications": [{"topic": "입력 파일 형식", "reason": "입력 형식 확인", "question": "입력 필드는 무엇인가요?"}]}
-        expected = {"improved_prompt": TEXT + "\n\n[직접 입력: 입력 파일 형식]", "changes": ["입력 형식 확인"], "questions": ["입력 필드는 무엇인가요?"]}
+        expected = {"improved_prompt": TEXT + "\n\n[직접 입력: 입력 파일 형식]", "changes": ["입력 형식 확인"], "questions": ["입력 필드는 무엇인가요?"], "clarifications": raw["clarifications"]}
         record = {"text": TEXT, "context": "배경", "result": self.raw}
         with patch("promptcoach.evaluation.ai.urlopen", return_value=claude_response(raw)) as call:
             self.assertEqual(validate_support(self.adapter.support(record)), expected)

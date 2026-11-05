@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const state = {boot:null, current:null, support:null, parent:null, rows:[], history:null, chart:'prompt', createKind:null, detail:null, page:'write', pending:null, draftEpoch:0, supportSource:null};
+const state = {boot:null, current:null, support:null, parent:null, rows:[], history:null, chart:'prompt', createKind:null, detail:null, page:'write', pending:null, draftEpoch:0, supportSource:null, supportChoices:[]};
 const techniqueName = id => state.boot.techniques.find(t=>t.id===id)?.name || id;
 function node(tag, text='', cls='') { const n=document.createElement(tag); if(text!==null)n.textContent=text; if(cls)n.className=cls; return n; }
 function clear(id){const n=typeof id==='string'?$(id):id; n.replaceChildren();return n;}
@@ -19,6 +19,7 @@ function options(id,items,empty=null,selected){
  const s=$(id),old=selected??s.value; s.replaceChildren(); if(empty!==null){const o=node('option',empty);o.value='';s.append(o);} for(const v of items){const o=node('option',v.name);o.value=v.id;s.append(o);} if([...s.options].some(o=>o.value===old))s.value=old;
 }
 let draftTimer;
+function supportKey(){const s=state.boot.settings;return JSON.stringify([draftSnapshot(),s.provider,s.model,s.base_url,$('remote-consent').checked]);}
 function scheduleDraftSave(){clearTimeout(draftTimer);$('char-count').textContent=`${$('prompt-text').value.length.toLocaleString()}자`;updateStale();draftTimer=setTimeout(saveDraft,250);}
 function saveDraft(){
  clearTimeout(draftTimer);
@@ -49,8 +50,10 @@ function updateStale(){
  $('support').disabled=empty||!!state.pending;$('evaluate').disabled=empty||!!state.pending;$('copy-prompt').disabled=empty;
  $('cancel-ai').classList.toggle('hidden',!state.pending);
  const supportChanged=!!state.support&&!sameDraft(state.supportSource);
- $('apply-support').disabled=!state.support||supportChanged;
- $('support-source-status').textContent=supportChanged?'요청 이후 초안이 바뀌었습니다. 현재 편집 내용은 유지됩니다. 개선안을 별도로 복사하거나 Support를 다시 요청하세요.':'개선안은 자동 적용되지 않습니다. 확인 후 가져오거나 복사하세요.';
+ const hasSelection=state.support&&(!Array.isArray(state.support.clarifications)||state.supportChoices.some(c=>c.check.checked));
+ $('apply-support').disabled=!hasSelection||supportChanged;
+ for(const choice of state.supportChoices){choice.check.disabled=supportChanged;choice.answer.disabled=supportChanged;}
+ $('support-source-status').textContent=supportChanged?'이전 초안의 제안입니다. 현재 내용으로 확인하려면 Support를 다시 눌러 주세요.':'필요한 항목만 선택하세요. 아는 내용은 직접 채우고 반영할 수 있습니다.';
  $('revision-tag').textContent=state.parent?'기존 기록의 새 버전':'자동 저장되는 초안';
 }
 async function aiRequest(button,fn){
@@ -58,7 +61,7 @@ async function aiRequest(button,fn){
  const request={controller:new AbortController(),button,label:button.textContent};state.pending=request;button.textContent='응답 기다리는 중…';
  $('ai-status').textContent='AI 처리 중 · 계속 작성하거나 바로 복사할 수 있습니다.';updateStale();
  try{await fn(request.controller.signal,request);}catch(e){if(e.name!=='AbortError')notice((e.message||'AI 요청에 실패했습니다.')+' 초안은 그대로이며 편집과 복사를 계속할 수 있습니다.',true);}
- finally{if(state.pending===request){state.pending=null;button.textContent=request.label;$('ai-status').textContent='Support와 점검은 필요할 때만 사용하세요.';updateStale();}}
+ finally{if(state.pending===request){state.pending=null;button.textContent=request.label;$('ai-status').textContent='작성 후 원할 때 Support를 누르세요. 입력하거나 멈추는 것만으로는 분석하지 않습니다.';updateStale();}}
 }
 function cancelAI(){const request=state.pending;if(!request)return;state.pending=null;request.controller.abort();request.button.textContent=request.label;$('ai-status').textContent='대기를 취소했습니다. 이미 전송한 요청은 AI 서버에서 계속 처리될 수 있습니다.';updateStale();}
 async function writeClipboard(text){
@@ -105,14 +108,40 @@ async function evaluate(){
   notice(result.stored===false?'참고 점검이 끝났습니다. 점수는 접힌 선택 점검에서 볼 수 있습니다.':'참고 점검을 이력에 저장했습니다. 작성·복사는 점검 결과와 관계없이 사용할 수 있습니다.');
  });
 }
+function selectedSupportPrompt(){
+ if(!state.support)return '';
+ if(!Array.isArray(state.support.clarifications))return state.support.improved_prompt;
+ const additions=state.supportChoices.filter(c=>c.check.checked).map(c=>c.answer.value.trim()?`${c.item.topic}: ${c.answer.value.trim()}`:`[직접 입력: ${c.item.topic}]`);
+ return state.supportSource.text+(additions.length?'\n\n'+additions.join('\n'):'');
+}
+function renderSupport(){
+ const r=state.support,root=clear('support-changes');clear('support-questions');state.supportChoices=[];
+ $('support-engine').textContent=r.engine;
+ if(Array.isArray(r.clarifications)){
+  if(!r.clarifications.length)root.append(node('p','추가로 확인할 핵심 누락이 없습니다. 현재 내용으로 진행해도 좋습니다.','small muted'));
+  for(const item of r.clarifications){
+   const card=node('div',null,'support-suggestion'),label=node('label',null,'checkbox'),check=node('input');check.type='checkbox';label.append(check,node('span',item.question));
+   const answerLabel=node('label','보완할 내용 · 선택','small'),answer=node('input');answer.type='text';answer.placeholder='알고 있는 내용만 적어 주세요';answerLabel.append(answer);
+   card.append(label,node('p','이유: '+item.reason,'small muted'),answerLabel);root.append(card);state.supportChoices.push({item,check,answer});
+   const changed=()=>{$('improved-prompt').textContent=selectedSupportPrompt();updateStale();};check.addEventListener('change',changed);answer.addEventListener('input',changed);
+  }
+ }else{root.append(list('개선한 부분',r.changes));$('support-questions').append(list('확인하면 좋은 내용',r.questions));}
+ $('improved-prompt').textContent=selectedSupportPrompt();$('support-result').classList.remove('hidden');updateStale();
+}
 async function support(){
  if(!$('prompt-text').value.trim())return;
+ const key=supportKey();
  const source=draftSnapshot(),payload={...source,allow_remote:$('remote-consent').checked};delete payload.epoch;
  await aiRequest($('support'),async(signal,request)=>{
-  const r=await api('/api/support',payload,signal);if(state.pending!==request)return;state.support=r;state.supportSource=source;
-  $('support-engine').textContent=r.engine;clear('support-changes').append(list('개선한 부분',r.changes));$('improved-prompt').textContent=r.improved_prompt;clear('support-questions').append(list('확인하면 좋은 내용',r.questions));$('support-result').classList.remove('hidden');
-  notice(sameDraft(source)?'개선안이 준비됐습니다. 확인 후 가져오거나 복사하세요.':'이전 초안에 대한 개선안이 준비됐습니다. 현재 편집 내용은 유지했습니다.');
+  const r=await api('/api/support',payload,signal);if(state.pending!==request)return;
+  if(key!==supportKey()){notice('요청 이후 내용이 바뀌어 지난 제안은 표시하지 않았습니다. 원할 때 Support를 다시 눌러 주세요.');return;}
+  state.support=r;state.supportSource=source;renderSupport();
+  notice('보완 제안이 준비됐습니다. 필요한 항목만 선택해 반영하세요.');
  });
+}
+function applySupport(){
+ if(!state.support||!sameDraft(state.supportSource)||$('apply-support').disabled)return;
+ $('prompt-text').value=selectedSupportPrompt();state.support=null;state.supportChoices=[];$('support-result').classList.add('hidden');saveDraft();notice('선택한 내용만 반영했습니다. 나머지 원문은 그대로 유지했습니다.');
 }
 function resetDraft(){state.draftEpoch++;state.current=null;state.parent=null;state.support=null;for(const id of ['prompt-title','prompt-text','prompt-context'])$(id).value='';$('task').value='auto';$('result-empty').classList.remove('hidden');$('result').classList.add('hidden');$('feedback-card').classList.add('hidden');$('support-result').classList.add('hidden');saveDraft();hideNotice();}
 function contextChanged(){state.draftEpoch++;state.current=null;state.parent=null;state.support=null;$('result-empty').classList.remove('hidden');$('result').classList.add('hidden');$('feedback-card').classList.add('hidden');$('support-result').classList.add('hidden');saveDraft();}
@@ -136,7 +165,7 @@ function providerGuide(selectedModel){
  options('model',models.map(id=>({id,name:id})),null,selectedModel||preset.model);$('model').disabled=provider==='local';keyStatus();
 }
 function refreshEngine(){const s=state.boot.settings;$('engine-pill').textContent=s.provider==='local'?'규칙 기반 점검 · AI 아님':`${state.boot.providers[s.provider].name} · ${s.model}`;$('remote-consent-wrap').classList.toggle('hidden',!['openai','anthropic'].includes(s.provider));$('remote-consent').checked=false;}
-async function saveSettings(){await busy($('save-settings'),async()=>{const r=await api('/api/settings',{provider:$('provider').value,model:$('model').value,base_url:$('base-url').value,timeout:Number($('timeout').value),api_key:$('api-key').value,clear_key:$('clear-key').checked});state.boot.settings=r;refreshEngine();renderSettings();notice('설정을 저장했습니다. API 키는 파일에 기록하지 않습니다.');});}
+async function saveSettings(){await busy($('save-settings'),async()=>{const r=await api('/api/settings',{provider:$('provider').value,model:$('model').value,base_url:$('base-url').value,timeout:Number($('timeout').value),api_key:$('api-key').value,clear_key:$('clear-key').checked});state.boot.settings=r;state.draftEpoch++;refreshEngine();renderSettings();notice('설정을 저장했습니다. API 키는 파일에 기록하지 않습니다.');});}
 function renderLibrary(){
  const root=clear('technique-cards');state.boot.techniques.forEach((t,i)=>{
   const card=node('article',null,'card');card.append(node('span',String(i+1).padStart(2,'0'),'eyebrow'),node('h2',t.name),node('p',t.description),node('p','사용: '+t.when),node('div','한계: '+t.limitation,'small'));
@@ -199,8 +228,8 @@ async function init(){
   for(const id of ['prompt-title','prompt-text','prompt-context','task'])$(id).addEventListener('input',scheduleDraftSave);
   for(const id of ['project','member'])$(id).addEventListener('change',()=>{refreshContext();contextChanged();});$('session').addEventListener('change',contextChanged);
   $('evaluate').addEventListener('click',evaluate);$('support').addEventListener('click',support);$('copy-prompt').addEventListener('click',copyPrompt);$('cancel-ai').addEventListener('click',cancelAI);window.addEventListener('pagehide',saveDraft);
-  $('copy-improved').addEventListener('click',async()=>{if(!state.support)return;try{await writeClipboard(state.support.improved_prompt);notice('개선안을 복사했습니다.');}catch(e){notice(e.message,true);}});
-  $('apply-support').addEventListener('click',()=>{if(!state.support||!sameDraft(state.supportSource))return;$('prompt-text').value=state.support.improved_prompt;state.supportSource=draftSnapshot();saveDraft();$('prompt-text').focus();window.scrollTo({top:0,behavior:'smooth'});notice('개선안을 편집기로 가져왔습니다. 필요한 부분만 수정한 뒤 바로 복사하세요. 점검은 선택입니다.');});
+  $('copy-improved').addEventListener('click',async()=>{if(!state.support)return;try{await writeClipboard(selectedSupportPrompt());notice('선택한 내용을 담은 프롬프트를 복사했습니다.');}catch(e){notice(e.message,true);}});
+  $('apply-support').addEventListener('click',applySupport);
   $('clear-draft').addEventListener('click',()=>{if($('prompt-text').value.trim()&&!confirm('현재 초안을 비우고 새 프롬프트를 시작할까요? 저장된 기록은 유지됩니다.'))return;resetDraft();});
   for(const kind of ['project','member','session'])$('new-'+kind).addEventListener('click',()=>openCreate(kind+'s'));
   $('cancel-create').addEventListener('click',()=>$('create-dialog').close());$('create-form').addEventListener('submit',create);

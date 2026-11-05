@@ -21,6 +21,7 @@ promptcoach/
     app.js                    API 연동·초안·그래프·이력 화면
 tests/test_coach.py            단위 및 HTTP 통합 테스트
 tests/test_providers.py        키 분리·Claude 전송/응답·서비스 통합 테스트
+tests/web_support.test.cjs     입력 시 호출 금지·선택 반영·지난 응답 폐기 UI 로직 테스트
 ```
 
 ## 평가 데이터 흐름
@@ -64,6 +65,8 @@ API 키는 `(provider, base_url)`별로 메모리에 보관하며 설정/DB/응�
 
 ## 작성 중심 흐름
 
-편집·자동 저장·복사는 브라우저에서 처리합니다. Support는 평가를 선행하지 않고 별도의 확인 항목 지시와 CLARIFICATION_SCHEMA로 한 번 요청합니다. AI는 topic/reason/question을 반환하며 어댑터는 원문을 그대로 보존하고 최대 두 개의 확인 빈칸을 덧붙입니다. 외부 API 응답은 기존 improved_prompt/changes/questions 형식을 유지하고 SUPPORT_SCHEMA에 대응하는 검증을 통과합니다. Qwen3 요청은 think=false를 사용합니다. AI 요청 중에는 해당 요청 버튼만 잠그며 작성·복사·화면 이동은 유지합니다. 요청 시 초안 스냅샷과 편집 세대를 비교해 이전 결과가 새 초안을 덮어쓰지 않도록 합니다. AbortController는 브라우저 대기를 취소하며 서버 추론 중단은 보장하지 않습니다.
+편집·자동 저장·복사는 브라우저에서 처리합니다. 입력이나 일시 정지는 AI 호출을 발생시키지 않습니다. Support는 사용자가 버튼을 눌렀을 때만, 평가를 선행하지 않고 별도의 확인 항목 지시와 CLARIFICATION_SCHEMA로 한 번 요청합니다. AI는 topic/reason/question을 반환하며 어댑터는 원문과 최대 두 개의 확인 빈칸을 담은 기존 improved_prompt/changes/questions에 clarifications 배열을 추가합니다. 공통 응답 검증은 항목 수와 필수 문자열을 검사하며 이전의 배열 없는 응답도 계속 지원합니다. Qwen3 요청은 think=false를 사용합니다.
+
+UI는 확인 항목별 질문·이유·선택 체크박스·답변 입력란을 표시합니다. 초기에는 전부 미선택이며, 선택한 항목에 한해 사용자가 적은 답이나 빈칸을 원문 뒤에 덧붙입니다. 미리보기·반영은 추가 AI 호출 없이 브라우저에서 처리합니다. AI 요청 중에는 요청 버튼을 잠그며 작성·복사·화면 이동은 유지합니다. 요청 시 초안과 편집 세대, 처리 설정 스냅샷을 비교해 지난 Support 응답은 표시하지 않습니다. 이미 표시한 제안도 초안이 바뀌면 적용을 막습니다. AbortController는 브라우저 대기를 취소하며 서버 추론 중단은 보장하지 않습니다.
 
 평가의 evidence는 정확 일치 여부를 evidence_verified로 기록합니다. 불일치는 AI의 해석으로 구분해 표시하며 다시 요청하거나 작업을 막지 않습니다. 필수 점수 형식 등 응답 계약 검증은 유지합니다. DB 스키마 변경 없이 기존 이력을 읽습니다.

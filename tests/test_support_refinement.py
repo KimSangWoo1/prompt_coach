@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from promptcoach.evaluation.ai import AIEvaluator
-from promptcoach.evaluation.contracts import EvaluationError
+from promptcoach.evaluation.contracts import EvaluationError, validate_support
 
 
 class SupportRefinementTests(unittest.TestCase):
@@ -22,11 +22,12 @@ class SupportRefinementTests(unittest.TestCase):
         self.assertNotIn("이벤트 버스", result["improved_prompt"])
         self.assertIn("[직접 입력: 관리할 UI 종류]", result["improved_prompt"])
         self.assertEqual(result["questions"], [self.item["question"]])
+        self.assertEqual(validate_support(result)["clarifications"], [self.item])
 
     def test_clear_request_returns_original_without_cosmetic_rewriting(self):
         with patch.object(self.adapter, "call", return_value={"clarifications": []}):
             result = self.adapter.support(self.record)
-        self.assertEqual(result, {"improved_prompt": self.text, "changes": [], "questions": []})
+        self.assertEqual(result, {"improved_prompt": self.text, "changes": [], "questions": [], "clarifications": []})
 
     def test_only_two_clarifications_are_shown(self):
         raw = {"clarifications": [{**self.item, "topic": str(i)} for i in range(4)]}
@@ -48,6 +49,12 @@ class SupportRefinementTests(unittest.TestCase):
         for raw in (None, [], {}, {"clarifications": "invalid"}, {"clarifications": [None]}):
             with self.subTest(raw=raw), patch.object(self.adapter, "call", return_value=raw), self.assertRaises(EvaluationError):
                 self.adapter.support(self.record)
+
+    def test_public_clarifications_reject_invalid_or_empty_fields(self):
+        base = {"improved_prompt": self.text, "changes": [], "questions": []}
+        for items in (None, "invalid", [None], [self.item] * 3, [{**self.item, "reason": " "}], [{"topic": "환경"}]):
+            with self.subTest(items=items), self.assertRaises(EvaluationError):
+                validate_support({**base, "clarifications": items})
 
 
 if __name__ == "__main__":

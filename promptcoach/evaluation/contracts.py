@@ -18,6 +18,7 @@ EVALUATION_SCHEMA = obj({"summary": S, "dimensions": {"type": "array", "items": 
     "recommendations": {"type": "array", "items": RECOMMEND_SCHEMA}, "strengths": STRINGS, "questions": STRINGS})
 SUPPORT_SCHEMA = obj({"improved_prompt": S, "changes": STRINGS, "questions": STRINGS})
 CLARIFICATION_SCHEMA = obj({"clarifications": {"type": "array", "items": obj({"topic": S, "reason": S, "question": S})}})
+SUPPORT_SCHEMA["properties"]["clarifications"] = {**CLARIFICATION_SCHEMA["properties"]["clarifications"], "maxItems": 2}
 
 def string(value, name, limit=3000):
     if not isinstance(value, str) or (limit is not None and len(value) > limit):
@@ -84,5 +85,13 @@ def validate_support(raw):
     prompt = string(raw.get("improved_prompt"), "improved_prompt", None)
     if not prompt.strip():
         raise EvaluationError("개선 프롬프트가 비어 있습니다.")
-    return {"improved_prompt": prompt, "changes": string_list(raw.get("changes"), "changes"),
-            "questions": string_list(raw.get("questions"), "questions")}
+    result = {"improved_prompt": prompt, "changes": string_list(raw.get("changes"), "changes"),
+              "questions": string_list(raw.get("questions"), "questions")}
+    if "clarifications" in raw:
+        items = raw["clarifications"]
+        if not isinstance(items, list) or len(items) > 2 or any(not isinstance(item, dict) for item in items):
+            raise EvaluationError("보완 항목 목록 형식이 올바르지 않습니다.")
+        result["clarifications"] = [{key: string(item.get(key), key) for key in ("topic", "reason", "question")} for item in items]
+        if any(not value.strip() for item in result["clarifications"] for value in item.values()):
+            raise EvaluationError("보완 항목 내용이 비어 있습니다.")
+    return result

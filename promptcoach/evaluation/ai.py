@@ -132,7 +132,7 @@ class AIEvaluator:
             {"prompt": record["text"], "context": record["context"], "task": record.get("task", "auto")}, CLARIFICATION_SCHEMA)
         if not isinstance(raw, dict) or not isinstance(raw.get("clarifications"), list):
             raise EvaluationError("AI의 보완 항목 형식을 확인하지 못했습니다. 원문은 유지됩니다.")
-        additions, changes, questions = [], [], []
+        additions, changes, questions, clarifications = [], [], [], []
         for item in raw["clarifications"][:2]:
             if not isinstance(item, dict):
                 raise EvaluationError("AI의 보완 항목 형식이 올바르지 않습니다.")
@@ -144,6 +144,7 @@ class AIEvaluator:
             additions.append(f"[직접 입력: {topic}]")
             changes.append(reason)
             questions.append(question)
+            clarifications.append({"topic": topic, "reason": reason, "question": question})
         # Preserve every original requirement; the model only proposes clarification slots.
         return {"improved_prompt": record["text"] + ("\n\n" + "\n".join(additions) if additions else ""),
-                "changes": changes, "questions": questions}
+                "changes": changes, "questions": questions, "clarifications": clarifications}
